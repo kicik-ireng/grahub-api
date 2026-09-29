@@ -30,7 +30,11 @@ let PermissionsGuard = class PermissionsGuard {
         if (!user || !user.permissions) {
             throw new common_1.ForbiddenException('No permissions assigned to this user');
         }
-        const hasPermission = () => requiredPermissions.some((permission) => user.permissions.includes(permission));
+        const hasPermission = () => {
+            if (user.scope === 'GLOBAL')
+                return true;
+            return requiredPermissions.some((permission) => user.permissions.includes(permission));
+        };
         if (!hasPermission()) {
             throw new common_1.ForbiddenException('You do not have the required permissions for this action');
         }

@@ -21,7 +21,10 @@ export class PermissionsGuard implements CanActivate {
       throw new ForbiddenException('No permissions assigned to this user');
     }
 
-    const hasPermission = () => requiredPermissions.some((permission) => user.permissions.includes(permission));
+    const hasPermission = () => {
+      if (user.scope === 'GLOBAL') return true;
+      return requiredPermissions.some((permission) => user.permissions.includes(permission));
+    };
     
     if (!hasPermission()) {
       throw new ForbiddenException('You do not have the required permissions for this action');
