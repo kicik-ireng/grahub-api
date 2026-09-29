@@ -1,0 +1,22 @@
+"use strict";
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.RtModule = void 0;
+const common_1 = require("@nestjs/common");
+const rt_controller_1 = require("./rt.controller");
+const rt_service_1 = require("./rt.service");
+let RtModule = class RtModule {
+};
+exports.RtModule = RtModule;
+exports.RtModule = RtModule = __decorate([
+    (0, common_1.Module)({
+        controllers: [rt_controller_1.RTsController],
+        providers: [rt_service_1.RTsService]
+    })
+], RtModule);
+//# sourceMappingURL=rt.module.js.map

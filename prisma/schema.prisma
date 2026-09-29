@@ -1,0 +1,925 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------------------------
+// USER, ROLE & PERMISSION
+// -----------------------------------------------------------------------------
+
+model User {
+  id        String     @id @default(uuid())
+  email     String     @unique
+  password  String
+  status    UserStatus @default(ACTIVE)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  roles    UserRole[]
+  resident Resident?
+
+  auditLogs    AuditLog[]
+  activityLogs ActivityLog[]
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+model Role {
+  id          String  @id @default(uuid())
+  code        String  @unique
+  name        String
+  description String?
+
+  users       UserRole[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id    String @id @default(uuid())
+  code  String @unique // e.g., residents.create
+  name  String
+  group String // e.g., residents, letters, finance
+
+  roles RolePermission[]
+}
+
+model UserRole {
+  userId String
+  roleId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+// -----------------------------------------------------------------------------
+// REGIONS
+// -----------------------------------------------------------------------------
+
+model Kelurahan {
+  id         String  @id @default(uuid())
+  code       String  @unique
+  name       String
+  postalCode String?
+  address    String?
+
+  rws       RW[]
+  residents Resident[]
+  families  Family[]
+}
+
+model RW {
+  id          String @id @default(uuid())
+  number      String
+  kelurahanId String
+
+  kelurahan Kelurahan  @relation(fields: [kelurahanId], references: [id])
+  rts       RT[]
+  residents Resident[]
+  families  Family[]
+
+  @@unique([number, kelurahanId])
+}
+
+model RT {
+  id     String @id @default(uuid())
+  number String
+  rwId   String
+
+  rw        RW         @relation(fields: [rwId], references: [id])
+  families  Family[]
+  residents Resident[]
+
+  @@unique([number, rwId])
+}
+
+// -----------------------------------------------------------------------------
+// RESIDENT & FAMILY
+// -----------------------------------------------------------------------------
+
+enum ResidentStatus {
+  ACTIVE
+  INACTIVE
+  DECEASED
+  MOVED_OUT
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum MaritalStatus {
+  SINGLE
+  MARRIED
+  DIVORCED
+  WIDOWED
+}
+
+model Resident {
+  id               String         @id @default(uuid())
+  nik              String         @unique
+  familyCardNumber String
+  fullName         String
+  nickname         String?
+  birthPlace       String
+  birthDate        DateTime
+  gender           Gender
+  maritalStatus    MaritalStatus
+  occupation       String?
+  education        String?
+  nationality      String         @default("WNI")
+  phone            String?
+  email            String?
+  address          String
+  status           ResidentStatus @default(ACTIVE)
+  photo            String?
+  moveInDate       DateTime?
+  moveOutDate      DateTime?
+  moveOutReason    String?
+  notes            String?
+
+  userId String? @unique
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  rtId        String
+  rt          RT        @relation(fields: [rtId], references: [id])
+  rwId        String
+  rw          RW        @relation(fields: [rwId], references: [id])
+  kelurahanId String
+  kelurahan   Kelurahan @relation(fields: [kelurahanId], references: [id])
+
+  familyId String?
+  family   Family? @relation(fields: [familyId], references: [id])
+
+  headOfFamilyFor Family? @relation("HeadOfFamily")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  mutations            ResidentMutation[]
+  birthsReported       Birth[]               @relation("BirthReporter")
+  births               Birth?                @relation("BornResident")
+  deathsReported       Death[]               @relation("DeathReporter")
+  death                Death?                @relation("DeceasedResident")
+  letterRequests       LetterRequest[]
+  patrolMembers        PatrolMember[]
+  volunteers           Volunteer[]
+  payments             Payment[]
+  dues                 Due[]
+  complaints           Complaint[]
+  complaintComments    ComplaintComment[]
+  pollResponses        PollResponse[]
+  activityParticipants ActivityParticipant[]
+  facilityLoans        FacilityLoan[]
+}
+
+model Family {
+  id               String         @id @default(uuid())
+  familyCardNumber String         @unique
+  headResidentId   String?        @unique
+  address          String
+  status           ResidentStatus @default(ACTIVE)
+
+  rtId        String
+  rt          RT        @relation(fields: [rtId], references: [id])
+  rwId        String
+  rw          RW        @relation(fields: [rwId], references: [id])
+  kelurahanId String
+  kelurahan   Kelurahan @relation(fields: [kelurahanId], references: [id])
+
+  headResident Resident?  @relation("HeadOfFamily", fields: [headResidentId], references: [id])
+  members      Resident[]
+
+  dues Due[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum MutationType {
+  MOVE_IN
+  MOVE_OUT
+  TRANSFER
+  ADDRESS_CHANGE
+  FAMILY_CHANGE
+}
+
+model ResidentMutation {
+  id         String       @id @default(uuid())
+  residentId String
+  type       MutationType
+  date       DateTime     @default(now())
+  reason     String?
+  fromRtId   String?
+  toRtId     String?
+  fromRwId   String?
+  toRwId     String?
+  notes      String?
+
+  resident Resident @relation(fields: [residentId], references: [id])
+}
+
+// -----------------------------------------------------------------------------
+// BIRTH & DEATH
+// -----------------------------------------------------------------------------
+
+enum ApprovalStatus {
+  PENDING
+  VERIFIED
+  APPROVED
+  REJECTED
+}
+
+model Birth {
+  id             String         @id @default(uuid())
+  reporterId     String
+  bornResidentId String?        @unique
+  date           DateTime
+  place          String
+  notes          String?
+  status         ApprovalStatus @default(PENDING)
+  attachmentUrl  String?
+
+  reporter     Resident  @relation("BirthReporter", fields: [reporterId], references: [id])
+  bornResident Resident? @relation("BornResident", fields: [bornResidentId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Death {
+  id            String         @id @default(uuid())
+  reporterId    String
+  deceasedId    String         @unique
+  date          DateTime
+  place         String
+  cause         String?
+  status        ApprovalStatus @default(PENDING)
+  attachmentUrl String?
+
+  reporter Resident @relation("DeathReporter", fields: [reporterId], references: [id])
+  deceased Resident @relation("DeceasedResident", fields: [deceasedId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// -----------------------------------------------------------------------------
+// LETTERS
+// -----------------------------------------------------------------------------
+
+enum LetterStatus {
+  DRAFT
+  SUBMITTED
+  VERIFICATION
+  REVISION
+  APPROVED
+  REJECTED
+  GENERATING
+  READY_TO_PRINT
+  PRINTED
+  ISSUED
+  CANCELLED
+}
+
+model LetterType {
+  id                        String  @id @default(uuid())
+  code                      String  @unique
+  name                      String
+  category                  String
+  description               String?
+  requiresRtApproval        Boolean @default(true)
+  requiresRwApproval        Boolean @default(false)
+  requiresKelurahanApproval Boolean @default(false)
+  requiresSignature         Boolean @default(true)
+  requiresAttachment        Boolean @default(false)
+  isActive                  Boolean @default(true)
+
+  templates LetterTemplate[]
+  requests  LetterRequest[]
+  fields    LetterField[]
+}
+
+model LetterTemplate {
+  id           String  @id @default(uuid())
+  letterTypeId String
+  name         String
+  contentHtml  String  @db.Text
+  version      Int     @default(1)
+  isActive     Boolean @default(true)
+
+  letterType LetterType              @relation(fields: [letterTypeId], references: [id])
+  versions   LetterTemplateVersion[]
+  requests   LetterRequest[]
+}
+
+model LetterTemplateVersion {
+  id          String   @id @default(uuid())
+  templateId  String
+  version     Int
+  contentHtml String   @db.Text
+  createdAt   DateTime @default(now())
+
+  template LetterTemplate @relation(fields: [templateId], references: [id])
+}
+
+model LetterField {
+  id           String  @id @default(uuid())
+  letterTypeId String
+  name         String
+  label        String
+  type         String // e.g. text, date, number
+  required     Boolean @default(true)
+
+  letterType LetterType @relation(fields: [letterTypeId], references: [id])
+}
+
+model LetterRequest {
+  id               String       @id @default(uuid())
+  number           String?      @unique
+  letterTypeId     String
+  templateId       String?
+  requesterId      String
+  status           LetterStatus @default(SUBMITTED)
+  dynamicData      Json? // Stores field values
+  qrCodeUrl        String?
+  verificationCode String?      @unique
+
+  letterType LetterType      @relation(fields: [letterTypeId], references: [id])
+  template   LetterTemplate? @relation(fields: [templateId], references: [id])
+  requester  Resident        @relation(fields: [requesterId], references: [id])
+
+  approvals   LetterApproval[]
+  revisions   LetterRevision[]
+  attachments LetterAttachment[]
+  documents   LetterDocument[]
+  printLogs   LetterPrintLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model LetterApproval {
+  id              String         @id @default(uuid())
+  letterRequestId String
+  level           String // RT, RW, KELURAHAN
+  status          ApprovalStatus
+  approverId      String?
+  notes           String?
+  date            DateTime       @default(now())
+
+  request LetterRequest @relation(fields: [letterRequestId], references: [id])
+}
+
+model LetterRevision {
+  id              String   @id @default(uuid())
+  letterRequestId String
+  notes           String
+  createdAt       DateTime @default(now())
+
+  request LetterRequest @relation(fields: [letterRequestId], references: [id])
+}
+
+model LetterNumberSequence {
+  id         String @id @default(uuid())
+  pattern    String @unique // e.g., RT03/RW05/IX/2026
+  lastNumber Int    @default(0)
+}
+
+model LetterAttachment {
+  id              String @id @default(uuid())
+  letterRequestId String
+  name            String
+  fileUrl         String
+
+  request LetterRequest @relation(fields: [letterRequestId], references: [id])
+}
+
+model LetterDocument {
+  id              String   @id @default(uuid())
+  letterRequestId String
+  pdfUrl          String
+  createdAt       DateTime @default(now())
+
+  request LetterRequest @relation(fields: [letterRequestId], references: [id])
+}
+
+model LetterPrintLog {
+  id              String   @id @default(uuid())
+  letterRequestId String
+  printedBy       String
+  date            DateTime @default(now())
+
+  request LetterRequest @relation(fields: [letterRequestId], references: [id])
+}
+
+// -----------------------------------------------------------------------------
+// FINANCE: DUES & PAYMENTS
+// -----------------------------------------------------------------------------
+
+enum DueStatus {
+  PENDING
+  PARTIAL
+  PAID
+  OVERDUE
+  WAIVED
+  CANCELLED
+}
+
+model Due {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  amount      Decimal   @db.Decimal(10, 2)
+  dueDate     DateTime
+  status      DueStatus @default(PENDING)
+
+  residentId String?
+  familyId   String?
+
+  resident Resident? @relation(fields: [residentId], references: [id])
+  family   Family?   @relation(fields: [familyId], references: [id])
+
+  items    DueItem[]
+  payments Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DueItem {
+  id     String  @id @default(uuid())
+  dueId  String
+  name   String
+  amount Decimal @db.Decimal(10, 2)
+
+  due Due @relation(fields: [dueId], references: [id])
+}
+
+enum PaymentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+model Payment {
+  id         String        @id @default(uuid())
+  dueId      String
+  residentId String
+  amount     Decimal       @db.Decimal(10, 2)
+  method     String // CASH, TRANSFER, QRIS
+  proofUrl   String?
+  status     PaymentStatus @default(PENDING)
+  date       DateTime      @default(now())
+  notes      String?
+
+  due      Due      @relation(fields: [dueId], references: [id])
+  resident Resident @relation(fields: [residentId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// -----------------------------------------------------------------------------
+// FINANCE: KAS (ACCOUNTS & TRANSACTIONS)
+// -----------------------------------------------------------------------------
+
+model FinanceAccount {
+  id      String  @id @default(uuid())
+  name    String
+  balance Decimal @default(0) @db.Decimal(15, 2)
+
+  transactions FinanceTransaction[]
+}
+
+model FinanceCategory {
+  id   String                 @id @default(uuid())
+  name String
+  type FinanceTransactionType
+
+  transactions FinanceTransaction[]
+}
+
+enum FinanceTransactionType {
+  INCOME
+  EXPENSE
+}
+
+model FinanceTransaction {
+  id            String                 @id @default(uuid())
+  accountId     String
+  categoryId    String
+  type          FinanceTransactionType
+  amount        Decimal                @db.Decimal(15, 2)
+  date          DateTime
+  description   String
+  attachmentUrl String?
+  status        ApprovalStatus         @default(PENDING)
+
+  account  FinanceAccount  @relation(fields: [accountId], references: [id])
+  category FinanceCategory @relation(fields: [categoryId], references: [id])
+
+  approvals FinanceApproval[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FinanceApproval {
+  id            String         @id @default(uuid())
+  transactionId String
+  approverId    String
+  status        ApprovalStatus
+  notes         String?
+  date          DateTime       @default(now())
+
+  transaction FinanceTransaction @relation(fields: [transactionId], references: [id])
+}
+
+// -----------------------------------------------------------------------------
+// PATROL & ACTIVITIES
+// -----------------------------------------------------------------------------
+
+model PatrolSchedule {
+  id    String   @id @default(uuid())
+  date  DateTime
+  shift String
+  notes String?
+
+  members PatrolMember[]
+}
+
+enum PatrolAttendanceStatus {
+  PRESENT
+  LATE
+  ABSENT
+  REPLACED
+}
+
+model PatrolMember {
+  id         String @id @default(uuid())
+  scheduleId String
+  residentId String
+
+  schedule    PatrolSchedule     @relation(fields: [scheduleId], references: [id])
+  resident    Resident           @relation(fields: [residentId], references: [id])
+  attendances PatrolAttendance[]
+}
+
+model PatrolAttendance {
+  id          String                 @id @default(uuid())
+  memberId    String
+  status      PatrolAttendanceStatus
+  checkIn     DateTime?
+  checkOut    DateTime?
+  evidenceUrl String?
+  notes       String?
+
+  member PatrolMember @relation(fields: [memberId], references: [id])
+}
+
+model Activity {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  date        DateTime
+  location    String
+  organizer   String?
+  budget      Decimal? @db.Decimal(12, 2)
+  scope       String // RT, RW, KELURAHAN
+
+  participants ActivityParticipant[]
+
+  createdAt DateTime @default(now())
+}
+
+model ActivityParticipant {
+  id         String  @id @default(uuid())
+  activityId String
+  residentId String
+  attended   Boolean @default(false)
+
+  activity Activity @relation(fields: [activityId], references: [id])
+  resident Resident @relation(fields: [residentId], references: [id])
+}
+
+// -----------------------------------------------------------------------------
+// COMPLAINTS
+// -----------------------------------------------------------------------------
+
+enum ComplaintStatus {
+  OPEN
+  VERIFICATION
+  ASSIGNED
+  IN_PROGRESS
+  WAITING
+  RESOLVED
+  REJECTED
+  CLOSED
+}
+
+enum ComplaintPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+model Complaint {
+  id          String            @id @default(uuid())
+  residentId  String
+  category    String
+  title       String
+  description String            @db.Text
+  status      ComplaintStatus   @default(OPEN)
+  priority    ComplaintPriority @default(NORMAL)
+  assignedTo  String?
+
+  resident Resident @relation(fields: [residentId], references: [id])
+
+  comments    ComplaintComment[]
+  attachments ComplaintAttachment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ComplaintComment {
+  id          String  @id @default(uuid())
+  complaintId String
+  residentId  String? // Can be null if commented by admin user
+  userId      String?
+  content     String  @db.Text
+
+  complaint Complaint @relation(fields: [complaintId], references: [id])
+  resident  Resident? @relation(fields: [residentId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model ComplaintAttachment {
+  id          String @id @default(uuid())
+  complaintId String
+  fileUrl     String
+
+  complaint Complaint @relation(fields: [complaintId], references: [id])
+}
+
+// -----------------------------------------------------------------------------
+// EMERGENCY CONTACTS & ANNOUNCEMENTS
+// -----------------------------------------------------------------------------
+
+model EmergencyContact {
+  id       String  @id @default(uuid())
+  name     String
+  category String // Polisi, Pemadam, etc.
+  phone    String
+  address  String?
+  isActive Boolean @default(true)
+}
+
+model Announcement {
+  id            String    @id @default(uuid())
+  title         String
+  content       String    @db.Text
+  targetScope   String // ALL, KELURAHAN, RW, RT, INDIVIDUAL
+  priority      String
+  publishDate   DateTime
+  expiryDate    DateTime?
+  imageUrl      String?
+  attachmentUrl String?
+
+  recipients AnnouncementRecipient[]
+
+  createdAt DateTime @default(now())
+}
+
+model AnnouncementRecipient {
+  id             String  @id @default(uuid())
+  announcementId String
+  targetId       String // ID of the RT, RW, Resident, etc.
+  isRead         Boolean @default(false)
+
+  announcement Announcement @relation(fields: [announcementId], references: [id])
+}
+
+// -----------------------------------------------------------------------------
+// MISCELLANEOUS (POLLS, FACILITIES, VOLUNTEERS)
+// -----------------------------------------------------------------------------
+
+model Poll {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+  isActive    Boolean  @default(true)
+
+  options   PollOption[]
+  responses PollResponse[]
+}
+
+model PollOption {
+  id     String @id @default(uuid())
+  pollId String
+  text   String
+
+  poll      Poll           @relation(fields: [pollId], references: [id])
+  responses PollResponse[]
+}
+
+model PollResponse {
+  id         String @id @default(uuid())
+  pollId     String
+  optionId   String
+  residentId String
+
+  poll     Poll       @relation(fields: [pollId], references: [id])
+  option   PollOption @relation(fields: [optionId], references: [id])
+  resident Resident   @relation(fields: [residentId], references: [id])
+
+  @@unique([pollId, residentId])
+}
+
+model Facility {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+  location    String
+  condition   String
+  isActive    Boolean @default(true)
+
+  loans FacilityLoan[]
+}
+
+model FacilityLoan {
+  id         String         @id @default(uuid())
+  facilityId String
+  residentId String
+  startDate  DateTime
+  endDate    DateTime
+  status     ApprovalStatus @default(PENDING)
+  notes      String?
+
+  facility Facility @relation(fields: [facilityId], references: [id])
+  resident Resident @relation(fields: [residentId], references: [id])
+}
+
+model Volunteer {
+  id           String @id @default(uuid())
+  residentId   String
+  skills       String
+  availability String
+
+  resident Resident @relation(fields: [residentId], references: [id])
+}
+
+// -----------------------------------------------------------------------------
+// DOCUMENTS
+// -----------------------------------------------------------------------------
+
+model Document {
+  id          String  @id @default(uuid())
+  title       String
+  description String?
+  category    String
+  scope       String // RT, RW, KELURAHAN
+  isDeleted   Boolean @default(false)
+
+  versions DocumentVersion[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DocumentVersion {
+  id         String @id @default(uuid())
+  documentId String
+  version    Int
+  fileUrl    String
+  uploadedBy String
+
+  document  Document @relation(fields: [documentId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+// -----------------------------------------------------------------------------
+// NOTIFICATIONS & WHATSAPP
+// -----------------------------------------------------------------------------
+
+enum NotificationChannel {
+  IN_APP
+  WHATSAPP
+  EMAIL
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  READ
+}
+
+model NotificationTemplate {
+  id      String              @id @default(uuid())
+  code    String              @unique
+  subject String?
+  content String              @db.Text
+  channel NotificationChannel
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String? // Can be null if sent to a generic phone/email
+  title     String
+  content   String   @db.Text
+  type      String // event type
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model NotificationLog {
+  id        String              @id @default(uuid())
+  recipient String
+  channel   NotificationChannel
+  content   String              @db.Text
+  status    NotificationStatus  @default(PENDING)
+  error     String?
+  createdAt DateTime            @default(now())
+}
+
+model WhatsAppGroup {
+  id      String @id @default(uuid())
+  name    String
+  groupId String @unique
+  scope   String
+}
+
+model WhatsAppMessage {
+  id        String             @id @default(uuid())
+  target    String // number or groupId
+  content   String             @db.Text
+  status    NotificationStatus @default(PENDING)
+  sentAt    DateTime?
+  createdAt DateTime           @default(now())
+}
+
+// -----------------------------------------------------------------------------
+// AUDIT & SYSTEM
+// -----------------------------------------------------------------------------
+
+model AuditLog {
+  id        String  @id @default(uuid())
+  userId    String?
+  action    String // CREATE, UPDATE, DELETE, etc.
+  module    String
+  entity    String
+  entityId  String?
+  before    Json?
+  after     Json?
+  ipAddress String?
+  userAgent String?
+  requestId String?
+
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+}
+
+model ActivityLog {
+  id      String  @id @default(uuid())
+  userId  String?
+  action  String // LOGIN, VIEW, DOWNLOAD, PRINT
+  module  String
+  details String? @db.Text
+
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+}
+
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String   @db.Text
+  description String?
+  updatedAt   DateTime @updatedAt
+}
