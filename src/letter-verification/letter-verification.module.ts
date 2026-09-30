@@ -4,6 +4,6 @@ import { LetterVerificationService } from './letter-verification.service';
 
 @Module({
   controllers: [LetterVerificationController],
-  providers: [LetterVerificationService]
+  providers: [LetterVerificationService],
 })
 export class LetterVerificationModule {}

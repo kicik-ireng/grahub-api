@@ -4,6 +4,6 @@ import { KelurahansService } from './kelurahan.service';
 
 @Module({
   controllers: [KelurahansController],
-  providers: [KelurahansService]
+  providers: [KelurahansService],
 })
 export class KelurahanModule {}

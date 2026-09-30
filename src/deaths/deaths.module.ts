@@ -4,6 +4,6 @@ import { DeathsService } from './deaths.service';
 
 @Module({
   controllers: [DeathsController],
-  providers: [DeathsService]
+  providers: [DeathsService],
 })
 export class DeathsModule {}

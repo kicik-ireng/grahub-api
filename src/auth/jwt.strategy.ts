@@ -13,7 +13,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_SECRET') || 'super-secret-key-change-me-in-production',
+      secretOrKey:
+        configService.get<string>('JWT_SECRET') ||
+        'super-secret-key-change-me-in-production',
     });
   }
 
@@ -40,8 +42,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             rw: true,
             kelurahan: true,
             family: true,
-          }
-        }
+          },
+        },
       },
     });
 
@@ -49,29 +51,36 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('User is unauthorized or inactive');
     }
 
-    const permissions = user.roles.flatMap(ur => ur.role.permissions.map(rp => rp.permission.code));
-    
+    const permissions = user.roles.flatMap((ur) =>
+      ur.role.permissions.map((rp) => rp.permission.code),
+    );
+
     // Determine scope based on roles and resident data
     // Example: Super Admin has global scope, RT has RT scope, etc.
     let scopeType = 'SELF';
-    if (user.roles.some(r => r.role.code === 'SUPER_ADMIN')) scopeType = 'GLOBAL';
-    else if (user.roles.some(r => r.role.code === 'KELURAHAN')) scopeType = 'KELURAHAN';
-    else if (user.roles.some(r => r.role.code === 'RW')) scopeType = 'RW';
-    else if (user.roles.some(r => r.role.code === 'RT')) scopeType = 'RT';
-    else if (user.roles.some(r => r.role.code === 'KEPALA_KELUARGA')) scopeType = 'FAMILY';
-    
-    return { 
-      userId: user.id, 
-      email: user.email, 
+    if (user.roles.some((r) => r.role.code === 'SUPER_ADMIN'))
+      scopeType = 'GLOBAL';
+    else if (user.roles.some((r) => r.role.code === 'KELURAHAN'))
+      scopeType = 'KELURAHAN';
+    else if (user.roles.some((r) => r.role.code === 'RW')) scopeType = 'RW';
+    else if (user.roles.some((r) => r.role.code === 'RT')) scopeType = 'RT';
+    else if (user.roles.some((r) => r.role.code === 'KEPALA_KELUARGA'))
+      scopeType = 'FAMILY';
+
+    return {
+      userId: user.id,
+      email: user.email,
       permissions: [...new Set(permissions)],
       scope: scopeType,
-      resident: user.resident ? {
-        id: user.resident.id,
-        rtId: user.resident.rtId,
-        rwId: user.resident.rwId,
-        kelurahanId: user.resident.kelurahanId,
-        familyId: user.resident.familyId,
-      } : null
+      resident: user.resident
+        ? {
+            id: user.resident.id,
+            rtId: user.resident.rtId,
+            rwId: user.resident.rwId,
+            kelurahanId: user.resident.kelurahanId,
+            familyId: user.resident.familyId,
+          }
+        : null,
     };
   }
 }

@@ -4,6 +4,6 @@ import { LetterRequestsService } from './letters.service';
 
 @Module({
   controllers: [LetterRequestsController],
-  providers: [LetterRequestsService]
+  providers: [LetterRequestsService],
 })
 export class LettersModule {}

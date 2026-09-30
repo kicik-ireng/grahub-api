@@ -25,8 +25,9 @@ export function applyScopeFilter(user: any, targetEntity: string = ''): any {
 
   // FAMILY sees their own family
   if (scope === 'FAMILY') {
-    if (!resident || !resident.familyId) throw new Error('Family Scope requires Family ID');
-    
+    if (!resident || !resident.familyId)
+      throw new Error('Family Scope requires Family ID');
+
     // For Resident entities, filter by familyId
     if (targetEntity === 'Resident') {
       return { familyId: resident.familyId };
@@ -37,7 +38,8 @@ export function applyScopeFilter(user: any, targetEntity: string = ''): any {
 
   // SELF / WARGA sees only themselves
   if (scope === 'SELF' || scope === 'WARGA') {
-    if (!resident || !resident.id) throw new Error('Warga Scope requires Resident ID');
+    if (!resident || !resident.id)
+      throw new Error('Warga Scope requires Resident ID');
     return { residentId: resident.id }; // Assuming the entity belongs to a resident
   }
 

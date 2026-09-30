@@ -4,6 +4,6 @@ import { RWsService } from './rw.service';
 
 @Module({
   controllers: [RWsController],
-  providers: [RWsService]
+  providers: [RWsService],
 })
 export class RwModule {}

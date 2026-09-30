@@ -1,4 +1,9 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
 @Injectable()
@@ -8,7 +13,7 @@ export class ScopeGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
     const user = request.user;
-    
+
     if (!user) {
       throw new ForbiddenException('User is not authenticated');
     }
@@ -21,7 +26,7 @@ export class ScopeGuard implements CanActivate {
     // Here we make the scope available in request so services can filter queries.
     // The actual filtering (e.g. Prisma `where` clause) should be done in the service layer
     // by reading `request.user.scope` and `request.user.resident`.
-    
+
     return true;
   }
 }

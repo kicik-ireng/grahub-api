@@ -16,7 +16,10 @@ export interface Response<T> {
 
 @Injectable()
 export class ResponseInterceptor<T> implements NestInterceptor<T, Response<T>> {
-  intercept(context: ExecutionContext, next: CallHandler): Observable<Response<T>> {
+  intercept(
+    context: ExecutionContext,
+    next: CallHandler,
+  ): Observable<Response<T>> {
     return next.handle().pipe(
       map((res) => {
         // If the controller already returned a properly formatted response, just return it
@@ -28,7 +31,7 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, Response<T>> {
         if (res && res.message) {
           delete res.message;
         }
-        
+
         const meta = res?.meta || undefined;
         if (res && res.meta) {
           delete res.meta;

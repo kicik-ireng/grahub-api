@@ -1,5 +1,22 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Request, BadRequestException } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Query,
+  Request,
+  BadRequestException,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { Permissions } from '../common/decorators/permissions.decorator';
@@ -39,7 +56,7 @@ export class LetterRequestsController {
   approve(@Param('id') id: string, @Request() req: any) {
     return this.service.updateStatus(id, 'APPROVED', req.user);
   }
-  
+
   @Patch(':id/reject')
   @Permissions('letters.reject')
   @ApiOperation({ summary: 'Reject LetterRequest' })
@@ -50,7 +67,10 @@ export class LetterRequestsController {
   @Post(':id/generate-pdf')
   @Permissions('letters.generate')
   @ApiOperation({ summary: 'Generate PDF for Approved Letter' })
-  @ApiResponse({ status: 200, description: 'PDF generated successfully with QR code' })
+  @ApiResponse({
+    status: 200,
+    description: 'PDF generated successfully with QR code',
+  })
   generatePdf(@Param('id') id: string, @Request() req: any) {
     return this.service.generatePdf(id, req.user);
   }

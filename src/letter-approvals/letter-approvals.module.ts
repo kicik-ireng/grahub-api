@@ -4,6 +4,6 @@ import { LetterApprovalsService } from './letter-approvals.service';
 
 @Module({
   controllers: [LetterApprovalsController],
-  providers: [LetterApprovalsService]
+  providers: [LetterApprovalsService],
 })
 export class LetterApprovalsModule {}

@@ -4,6 +4,6 @@ import { InsightsService } from './insights.service';
 
 @Module({
   controllers: [InsightsController],
-  providers: [InsightsService]
+  providers: [InsightsService],
 })
 export class InsightsModule {}

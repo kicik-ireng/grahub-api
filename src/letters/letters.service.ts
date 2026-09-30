@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, InternalServerErrorException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  InternalServerErrorException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { applyScopeFilter } from '../common/utils/scope.util';
 import * as crypto from 'crypto';
@@ -17,7 +22,9 @@ export class LetterRequestsService {
         },
       });
     } catch (error) {
-      throw new InternalServerErrorException('Failed to create letter request: ' + error.message);
+      throw new InternalServerErrorException(
+        'Failed to create letter request: ' + error.message,
+      );
     }
   }
 
@@ -26,10 +33,10 @@ export class LetterRequestsService {
       const page = Number(query.page) || 1;
       const limit = Number(query.limit) || 10;
       const skip = (page - 1) * limit;
-      
+
       // Apply Scope Authorization Filter
       const scopeFilter = applyScopeFilter(user, 'LetterRequest');
-      
+
       const whereClause = {
         ...scopeFilter,
         ...(query.status && { status: query.status }),
@@ -52,10 +59,12 @@ export class LetterRequestsService {
           page,
           limit,
           totalPages: Math.ceil(total / limit),
-        }
+        },
       };
     } catch (error) {
-      throw new InternalServerErrorException('Failed to fetch letter requests: ' + error.message);
+      throw new InternalServerErrorException(
+        'Failed to fetch letter requests: ' + error.message,
+      );
     }
   }
 
@@ -68,22 +77,34 @@ export class LetterRequestsService {
       return record;
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException('Failed to fetch letter request: ' + error.message);
+      throw new InternalServerErrorException(
+        'Failed to fetch letter request: ' + error.message,
+      );
     }
   }
 
-  async updateStatus(id: string, status: 'APPROVED' | 'REJECTED' | 'VERIFICATION', user: any) {
+  async updateStatus(
+    id: string,
+    status: 'APPROVED' | 'REJECTED' | 'VERIFICATION',
+    user: any,
+  ) {
     try {
       const letter = await this.findOne(id);
-      
+
       // Additional business logic for verifying if user can approve
       return await this.prisma.letterRequest.update({
         where: { id },
         data: { status },
       });
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof BadRequestException) throw error;
-      throw new InternalServerErrorException('Failed to update letter status: ' + error.message);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      )
+        throw error;
+      throw new InternalServerErrorException(
+        'Failed to update letter status: ' + error.message,
+      );
     }
   }
 
@@ -108,19 +129,25 @@ export class LetterRequestsService {
           userId: user.userId,
           action: 'GENERATE_PDF',
           module: 'letters',
-          details: `Generated PDF for letter ${id}`
-        }
+          details: `Generated PDF for letter ${id}`,
+        },
       });
 
       return await this.prisma.letterRequest.update({
         where: { id },
-        data: { 
+        data: {
           status: 'READY_TO_PRINT',
         },
       });
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof BadRequestException) throw error;
-      throw new InternalServerErrorException('Failed to generate PDF: ' + error.message);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      )
+        throw error;
+      throw new InternalServerErrorException(
+        'Failed to generate PDF: ' + error.message,
+      );
     }
   }
 
@@ -133,7 +160,9 @@ export class LetterRequestsService {
       });
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException('Failed to update letter request: ' + error.message);
+      throw new InternalServerErrorException(
+        'Failed to update letter request: ' + error.message,
+      );
     }
   }
 
@@ -145,7 +174,9 @@ export class LetterRequestsService {
       });
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException('Failed to delete letter request: ' + error.message);
+      throw new InternalServerErrorException(
+        'Failed to delete letter request: ' + error.message,
+      );
     }
   }
 }

@@ -4,6 +4,6 @@ import { ResidentMutationsService } from './resident-mutations.service';
 
 @Module({
   controllers: [ResidentMutationsController],
-  providers: [ResidentMutationsService]
+  providers: [ResidentMutationsService],
 })
 export class ResidentMutationsModule {}

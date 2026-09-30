@@ -4,6 +4,6 @@ import { FamilysService } from './families.service';
 
 @Module({
   controllers: [FamilysController],
-  providers: [FamilysService]
+  providers: [FamilysService],
 })
 export class FamiliesModule {}

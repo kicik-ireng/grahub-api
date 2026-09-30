@@ -4,6 +4,6 @@ import { PatrolSchedulesService } from './patrol.service';
 
 @Module({
   controllers: [PatrolSchedulesController],
-  providers: [PatrolSchedulesService]
+  providers: [PatrolSchedulesService],
 })
 export class PatrolModule {}

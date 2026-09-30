@@ -15,7 +15,7 @@ async function bootstrap() {
 
   // API Versioning & Global Prefix
   app.setGlobalPrefix('api/v1');
-  
+
   // Validation
   app.useGlobalPipes(
     new ValidationPipe({
@@ -39,7 +39,7 @@ async function bootstrap() {
     .setVersion('1.0')
     .addBearerAuth()
     .build();
-    
+
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document); // Accessible at /docs
 

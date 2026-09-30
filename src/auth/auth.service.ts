@@ -20,7 +20,10 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials or user inactive');
     }
 
-    const isPasswordValid = await bcrypt.compare(loginDto.password, user.password);
+    const isPasswordValid = await bcrypt.compare(
+      loginDto.password,
+      user.password,
+    );
 
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
@@ -35,7 +38,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         status: user.status,
-      }
+      },
     };
   }
 
@@ -58,23 +61,25 @@ export class AuthService {
                     permission: {
                       select: {
                         code: true,
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
 
-    const permissions = user.roles.flatMap(ur => ur.role.permissions.map(rp => rp.permission.code));
-    const roles = user.roles.map(ur => ur.role.code);
+    const permissions = user.roles.flatMap((ur) =>
+      ur.role.permissions.map((rp) => rp.permission.code),
+    );
+    const roles = user.roles.map((ur) => ur.role.code);
 
     return {
       ...user,

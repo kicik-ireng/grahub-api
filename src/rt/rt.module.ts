@@ -4,6 +4,6 @@ import { RTsService } from './rt.service';
 
 @Module({
   controllers: [RTsController],
-  providers: [RTsService]
+  providers: [RTsService],
 })
 export class RtModule {}

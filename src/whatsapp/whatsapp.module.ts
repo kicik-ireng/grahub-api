@@ -4,6 +4,6 @@ import { WhatsappService } from './whatsapp.service';
 
 @Module({
   controllers: [WhatsappController],
-  providers: [WhatsappService]
+  providers: [WhatsappService],
 })
 export class WhatsappModule {}
